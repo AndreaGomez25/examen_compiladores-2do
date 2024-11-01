@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validador de CURP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            font-size: 1.2em;
+        }
+        img {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 1200px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .tables {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .table-container {
+            width: 48%;
+            overflow: auto;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        button {
+            padding: 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 1em;
+            margin: 0 5px;
+        }
+        button[type="submit"] {
+            background-color: #28a745;
+            color: white;
+            border: none;
+        }
+        button[type="submit"]:hover {
+            background-color: #218838;
+        }
+        button[type="button"] {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+        }
+        button[type="button"]:hover {
+            background-color: #c82333;
+        }
+        table {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+            font-size: 1.2em;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #009900;
+            color: white;
+            font-weight: bold;
+        }
+        .mensaje {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .token-count {
+            margin-top: 30px;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Imagen de fondo -->
+    <img src="static/img/logo.png" alt="Fondo">
+
+    <div class="container">
+        <h2>Validador de CURP</h2>
+        <form method="POST" onsubmit="return validarCURP();">
+            <input type="text" name="curp" id="curp" placeholder="Ingresa tu CURP" required />
+            <div class="button-container">
+                <button type="submit">Validar</button>
+                <button type="button" onclick="document.querySelector('input[name=curp]').value = '';">Borrar</button>
+            </div>
+        </form>
+
+        <div class="tables">
+            <div class="table-container">
+                <h3>Análisis Léxico</h3>
+                <table id="tablaLexico">
+                    <thead>
+                        <tr>
+                            <th>Campo</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for campo, valor in tabla_lexico %}
+                        <tr>
+                            <td>{{ campo }}</td>
+                            <td>{{ valor }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-container">
+                <h3>Análisis Sintáctico</h3>
+                <table id="tablaSintactico">
+                    <thead>
+                        <tr>
+                            <th>Campo</th>
+                            <th>Mensaje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for campo, mensaje in tabla_sintactico %}
+                        <tr>
+                            <td>{{ campo }}</td>
+                            <td>{{ mensaje }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if token_count %}
+        <div class="token-count">
+            <h3>Contadores de Tokens</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo de Token</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tipo, total in token_count.items() %}
+                    <tr>
+                        <td>{{ tipo }}</td>
+                        <td>{{ total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function validarCURP() {
+            const curp = document.querySelector('input[name="curp"]').value.toUpperCase();
+            const regexCURP = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[0-9A-Z]\d$/;
+            let mensajes = [];
+
+            // Verificación de la longitud de la CURP
+            if (curp.length !== 18) {
+                mensajes.push("Error: La CURP debe contener exactamente 18 caracteres.");
+            }
+
+            // Verificación del formato de la CURP
+            if (!regexCURP.test(curp)) {
+                mensajes.push("Error: El formato de la CURP es incorrecto.");
+            } else {
+                // Extrae el año, mes y día de la CURP
+                const year = parseInt(curp.slice(4, 6));
+                const month = parseInt(curp.slice(6, 8));
+                const day = parseInt(curp.slice(8, 10));
+
+                // Determina el año completo y si es bisiesto
+                const currentYear = new Date().getFullYear();
+                const fullYear = year + (year <= currentYear % 100 ? 2000 : 1900);
+                const isLeapYear = (fullYear % 4 === 0 && (fullYear % 100 !== 0 || fullYear % 400 === 0));
+
+                // Meses y días permitidos en cada mes
+                const daysInMonth = {
+                    1: 31, 2: isLeapYear ? 29 : 28, 3: 31, 4: 30, 5: 31,
+                    6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31
+                };
+
+                // Verifica que el mes y el día sean válidos
+                if (month < 1 || month > 12 || day < 1 || day > daysInMonth[month]) {
+                    mensajes.push("Error: La CURP contiene una fecha inválida.");
+                }
+            }
+
+            // Muestra los mensajes en el Análisis Sintáctico
+            const tablaSintactico = document.querySelector('#tablaSintactico tbody');
+            tablaSintactico.innerHTML = '';  // Limpiar contenido previo
+            mensajes.forEach(mensaje => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>Validación</td><td>${mensaje}</td>`;
+                tablaSintactico.appendChild(row);
+            });
+
+            // Oculta el Análisis Léxico si hay errores
+            const tablaLexico = document.querySelector('#tablaLexico tbody');
+            if (mensajes.length > 0) {
+                tablaLexico.innerHTML = '';  // Borra la tabla de análisis léxico si hay errores
+            }
+
+            // Solo retorna true si no hay mensajes de error
+            return mensajes.length === 0;
+        }
+
+        // Asigna la función al botón de validación
+        document.querySelector('form').onsubmit = function() {
+            return validarCURP();
+        };
+    </script>
+</body>
+</html>
